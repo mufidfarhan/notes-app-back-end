@@ -38,28 +38,30 @@ class NotesService {
   }
 
   editNoteById(id, { title, body, tags }) {
-    const index = notes.findIndex((note) => note.id === id);
+    const index = this._notes.findIndex((note) => note.id === id);
 
     if (index === -1) {
       throw new Error('Gagal memperbarui catatan. Id tidak ditemukan');
     }
 
-    const updateAt = new Date().toISOString();
+    const updatedAt = new Date().toISOString();
 
     this._notes[index] = {
       ...this._notes[index],
       title,
       tags,
       body,
-      updateAt,
+      updatedAt,
     };
   }
 
   deleteNoteById(id) {
     const index = this._notes.findIndex((note) => note.id === id);
+
     if (index === -1) {
       throw new Error('Catatan gagal dihapus. Id tidak ditemukan');
     }
+
     this._notes.splice(index, 1);
   }
 }

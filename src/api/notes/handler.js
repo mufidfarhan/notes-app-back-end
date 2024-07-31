@@ -1,6 +1,26 @@
+/*
+ * Fungsi handler digunakan untuk menangani permintaan
+ * dari client yang datang kemudian memberikan respons.
+ *
+ * Fungsi handler harus menghindari proses lain yang
+ * bukan bagian dari request handling.
+ */
+
 class NotesHandler {
   constructor(service) {
     this._service = service;
+
+    /*
+     * Fungsi bind berfungsi untuk mengikat implementasi function
+     * agar ia tetap memiliki konteks sesuai nilai yang ditetapkan
+     * pada argumen yang diberikan pada fungsi bind tersebut.
+    */
+
+    this.postNoteHandler = this.postNoteHandler.bind(this);
+    this.getNotesHandler = this.getNotesHandler.bind(this);
+    this.getNoteByIdHandler = this.getNoteByIdHandler.bind(this);
+    this.putNoteByIdHandler = this.putNoteByIdHandler.bind(this);
+    this.deleteNoteByIdHandler = this.deleteNoteByIdHandler.bind(this);
   }
 
   postNoteHandler(request, h) {
@@ -41,6 +61,7 @@ class NotesHandler {
   getNoteByIdHandler(request, h) {
     try {
       const { id } = request.params;
+
       const note = this._service.getNoteById(id);
       return {
         status: 'success',
@@ -58,7 +79,7 @@ class NotesHandler {
     }
   }
 
-  putNoteByIdHandler(request) {
+  putNoteByIdHandler(request, h) {
     try {
       const { id } = request.params;
 
@@ -85,7 +106,7 @@ class NotesHandler {
       return {
         status: 'success',
         message: 'Catatan berhasil dihapus',
-      };
+      }
     } catch (error) {
       const response = h.response({
         status: 'fail',
