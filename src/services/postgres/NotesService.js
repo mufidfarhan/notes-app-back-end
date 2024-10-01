@@ -4,12 +4,11 @@ const InvariantError = require('../../exceptions/InvariantError');
 const { mapDBToModel } = require('../../utils');
 const NotFoundError = require('../../exceptions/NotFoundError');
 const AuthorizationError = require('../../exceptions/AuthorizationError');
-const CollaborationsService = require('./CollaborationsService');
 
 class NotesService {
-  constructor() {
+  constructor(collaborationService) {
     this._pool = new Pool();
-    this._collaborationService = CollaborationsService;
+    this._collaborationService = collaborationService;
   }
 
   async addNote({
@@ -40,16 +39,29 @@ class NotesService {
 
   async getNotes(owner) {
     const query = {
-      text: 'SELECT * FROM notes WHERE owner = $1',
+      text: `
+        SELECT notes.* FROM notes
+        LEFT JOIN collaborations ON collaborations.note_id = notes.id
+        WHERE notes.owner = $1 OR collaborations.user_id = $1
+        GROUP BY notes.id
+      `,
       values: [owner],
     };
+    /*
+     * Data notes yang dihasilkan berpotensi duplikasi, sehingga di
+     * akhir kueri, kita GROUP nilainya agar menghilangkan duplikasi
+     * yang dilihat berdasarkan notes.id.
+     */
     const result = await this._pool.query(query);
     return result.rows.map(mapDBToModel);
   }
 
   async getNoteById(id) {
     const query = {
-      text: 'SELECT * FROM notes WHERE id = $1',
+      text: `SELECT notes.*, users.username
+        FROM notes
+        LEFT JOIN users ON users.id = notes.owner
+        WHERE notes.id = $1`,
       values: [id],
     };
     const result = await this._pool.query(query);
@@ -111,6 +123,10 @@ class NotesService {
   async verifyNoteAccess(noteId, userId) {
     try {
       await this.verifyNoteOwner(noteId, userId);
+      /*
+       * error yang dibangkitkan dari fungsi verifyNoteOwner bisa
+       * berupa NotFoundError atau AuthorizationError
+      */
     } catch (error) {
       if (error instanceof NotFoundError) {
         throw error;
