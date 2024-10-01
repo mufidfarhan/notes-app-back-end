@@ -3,11 +3,13 @@ const { nanoid } = require('nanoid');
 const InvariantError = require('../../exceptions/InvariantError');
 const { mapDBToModel } = require('../../utils');
 const NotFoundError = require('../../exceptions/NotFoundError');
-const AuthorizationError = require('../../exceptions/AuthenticationError');
+const AuthorizationError = require('../../exceptions/AuthorizationError');
+const CollaborationsService = require('./CollaborationsService');
 
 class NotesService {
   constructor() {
     this._pool = new Pool();
+    this._collaborationService = CollaborationsService;
   }
 
   async addNote({
@@ -101,7 +103,24 @@ class NotesService {
     const note = result.rows[0];
 
     if (note.owner !== owner) {
-      throw new AuthorizationError('Anda tidak berhak mengakses resouce ini');
+      throw new AuthorizationError('Anda tidak berhak mengakses resource ini');
+    }
+  }
+
+  // https://www.dicoding.com/academies/271/tutorials/17418?from=17415
+  async verifyNoteAccess(noteId, userId) {
+    try {
+      await this.verifyNoteOwner(noteId, userId);
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+
+      try {
+        await this._collaborationService.verifyCollaborator(noteId, userId);
+      } catch {
+        throw error;
+      }
     }
   }
 }
